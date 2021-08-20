@@ -92,7 +92,7 @@ plot(density(out$boot.samples))
 library(boot)
 
 f <- function(x, i) {
-  return(max(x[i, 1]))
+  return(min(x[i, 2]) - max(x[i, 1]))
 }
 
 (y <- boot(out$genetic.dists, f, R = 10000))
