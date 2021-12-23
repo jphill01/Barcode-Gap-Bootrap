@@ -1,4 +1,6 @@
-set.seed(0673227)
+setwd("/Users/jarrettphillips/desktop")
+
+# set.seed(0673227)
 
 boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max.intra"), m, B = 10000, 
                     replacement = TRUE, conf.level = 0.95) {
@@ -16,23 +18,25 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
       intra.boot <- sample(genetic.dists[, "intra"], size = m, replace = FALSE)
       inter.boot <- sample(genetic.dists[, "inter"], size = m, replace = FALSE)
     }
-  
-  statistic <- match.arg(statistic
-                         )
-  if (statistic == "barcode.gap") {
-    boot.samples[i] <- min(inter.boot) - max(intra.boot) # barcode gap
-  } else if (statistic == "min.inter") {
-    boot.samples[i] <- min(inter.boot) # minimum intraspecific distance
-  } else {
-    boot.samples[i] <- max(intra.boot) # minimum intraspecific distance
+    
+    statistic <- match.arg(statistic)
+    
+    if (statistic == "barcode.gap") {
+      boot.samples[i] <- min(inter.boot) - max(intra.boot) # barcode gap
+      stat.obs <- min(genetic.dists[, "inter"]) - max(genetic.dists[, "intra"]) # observed barcode gap
+    } else if (statistic == "min.inter") {
+      boot.samples[i] <- min(inter.boot) # minimum intraspecific distance
+      stat.obs <- min(genetic.dists[, "inter"]) # observed minimum interspecfic distance
+    } else {
+      boot.samples[i] <- max(intra.boot) # minimum intraspecific distance
+      stat.obs <- max(genetic.dists[, "intra"]) # observed maximum intraspecific distance
     }
   }
   
-  stat.obs <- min(genetic.dists[, "inter"]) - max(genetic.dists[, "intra"]) # observed statistic
   stat.boot.est <- mean(boot.samples) # bootstrap mean
   stat.boot.bias <- stat.boot.est - stat.obs # bootstrap bias
   stat.boot.se <- sqrt(sum((boot.samples - stat.boot.est)^2) / (B - 1)) # bootstrap standard error
-
+  
   ### Bootstrap confidence intervals ###
   
   idx <- trunc((B + 1) * c((1 - conf.level) / 2, (1 + conf.level) / 2))
@@ -72,31 +76,7 @@ anoDist <- dist.dna(anoteropsis)
 anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"), 
                  function(x) paste(x[1], x[2], sep = "_"))
 
-data(dolomedes)
-doloDist <- dist.dna(dolomedes)
-doloSpp <- substr(dimnames(dolomedes)[[1]], 1, 5)
-
-
-intra <- maxInDist(doloDist, doloSpp)
-inter <- nonConDist(doloDist, doloSpp)
-
 intra <- maxInDist(anoDist, anoSpp)
 inter <- nonConDist(anoDist, anoSpp)
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "max.intra", m = 8, B = 10000, replacement = TRUE, conf.level = 0.95))
-plot(density(out$boot.samples))
-
-
-### Compare to standard bootstrapping ###
-
-library(boot)
-
-f <- function(x, i) {
-  return(min(x[i, 2]) - max(x[i, 1]))
-}
-
-(y <- boot(out$genetic.dists, f, R = 10000))
-plot(y)
-boot.ci(y, type = c("norm", "basic", "perc"))
- 
-        
+(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = 8, B = 10000, replacement = TRUE, conf.level = 0.95))
