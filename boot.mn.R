@@ -44,8 +44,7 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
   
   stat.boot.norm.ci <- (stat.obs - stat.boot.bias) + z.crit * sd(boot.samples) # Normal
   stat.boot.basic.ci <- rev(2*stat.obs - sort(boot.samples)[idx]) # Basic
-  # stat.boot.perc.ci <- sort(boot.samples)[idx] # Percentile
-  stat.boot.perc.ci <- quantile(boot.samples, c())
+  stat.boot.perc.ci <- sort(boot.samples)[idx] # Percentile
   
   ### Output ###
   
