@@ -1,6 +1,5 @@
 setwd("/Users/jarrettphillips/desktop")
-
-# set.seed(0673227)
+set.seed(0673227)
 
 boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max.intra"), m, B = 10000, 
                     replacement = TRUE, conf.level = 0.95) {
@@ -35,7 +34,8 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
   
   stat.boot.est <- mean(boot.samples) # bootstrap mean
   stat.boot.bias <- stat.boot.est - stat.obs # bootstrap bias
-  stat.boot.se <- sqrt(sum((boot.samples - stat.boot.est)^2) / (B - 1)) # bootstrap standard error
+  # stat.boot.se <- sqrt(sum((boot.samples - stat.boot.est)^2) / (B - 1)) # bootstrap standard error
+  stat.boot.se <- sd(boot.samples)
   
   ### Bootstrap confidence intervals ###
   
@@ -44,7 +44,8 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
   
   stat.boot.norm.ci <- (stat.obs - stat.boot.bias) + z.crit * sd(boot.samples) # Normal
   stat.boot.basic.ci <- rev(2*stat.obs - sort(boot.samples)[idx]) # Basic
-  stat.boot.perc.ci <- sort(boot.samples)[idx] # Percentile
+  # stat.boot.perc.ci <- sort(boot.samples)[idx] # Percentile
+  stat.boot.perc.ci <- quantile(boot.samples, c())
   
   ### Output ###
   
@@ -79,4 +80,18 @@ anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"),
 intra <- maxInDist(anoDist, anoSpp)
 inter <- nonConDist(anoDist, anoSpp)
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = 8, B = 10000, replacement = TRUE, conf.level = 0.95))
+(out <- boot.mn(intra = intra, inter = inter, statistic = "max.intra", m = 8, B = 10000, replacement = TRUE, conf.level = 0.95))
+plot(density(out$boot.samples))
+
+
+# Compare to standard bootstrap
+
+library(boot)
+
+f <- function(x, i) {
+  return(min(x[i, 2]) - max(x[i, 1])) # barcode gap
+}
+y
+y <- boot(out$genetic.dists, R = 10000, f)
+plot(y)
+boot.ci(y)
