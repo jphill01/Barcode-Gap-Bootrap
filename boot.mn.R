@@ -10,10 +10,10 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
   
   for (i in 1:B) {
     # sample m genetic distances with or without replacement
-    if (replacement == TRUE) {
+    if (replacement == TRUE) { # bootstrapping
       intra.boot <- sample(genetic.dists[, "intra"], size = m, replace = TRUE)
       inter.boot <- sample(genetic.dists[, "inter"], size = m, replace = TRUE)
-    } else {
+    } else { # subsampling
       intra.boot <- sample(genetic.dists[, "intra"], size = m, replace = FALSE)
       inter.boot <- sample(genetic.dists[, "inter"], size = m, replace = FALSE)
     }
@@ -42,9 +42,37 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
   idx <- trunc((B + 1) * c((1 - conf.level) / 2, (1 + conf.level) / 2))
   z.crit <- qnorm(c((1 - conf.level) / 2, (1 + conf.level) / 2)) # z critical values
   
+  ## BCa interval ##
+  
+  z0 <- qnorm(mean(boot.samples <= stat.obs))
+  
+  I <- rep(NA, N)
+  for (i in 1:N) {
+    # Remove ith data point
+    intra.new <- genetic.dists[, "intra"][-i]
+    inter.new <- genetic.dists[, "inter"][-i]
+    # Estimate parameter
+    if (statistic == "max.intra") {
+      jack.est <- max(intra.new)
+    } else if (statistic == "min.inter") {
+      jack.est <- min(inter.new)
+    } else {
+      jack.est <- min(inter.new) - max(intra.new)
+    }
+    I[i] <- (N - 1) * (stat.obs - jack.est)
+  } 
+  
+  # Estimate acceleration constant
+  a.hat <- (sum(I^3) / sum(I^2)^(3/2)) / 6
+  
+  p.adjusted <- pnorm(z0 + (z0 + z.crit) / (1 - a.hat * (z0 + z.crit))) # adjusted z critical value
+ 
   stat.boot.norm.ci <- (stat.obs - stat.boot.bias) + z.crit * sd(boot.samples) # Normal
   stat.boot.basic.ci <- rev(2*stat.obs - sort(boot.samples)[idx]) # Basic
-  stat.boot.perc.ci <- sort(boot.samples)[idx] # Percentile
+  # stat.boot.perc.ci <- sort(boot.samples)[idx] # Percentile
+  stat.boot.perc.ci <- quantile(boot.samples, c((1 - conf.level) / 2, (1 + conf.level) / 2))
+  # stat.boot.bca.ci <- sort(boot.samples)[idx.adjusted]
+  stat.boot.bca.ci <- quantile(boot.samples, round(p.adjusted, 1))
   
   ### Output ###
   
@@ -63,7 +91,8 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
               stat.boot.se = stat.boot.se,
               stat.boot.norm.ci = stat.boot.norm.ci,
               stat.boot.basic.ci = stat.boot.basic.ci,
-              stat.boot.perc.ci = stat.boot.perc.ci))
+              stat.boot.perc.ci = stat.boot.perc.ci,
+              stat.boot.bca.ci = stat.boot.bca.ci))
 }
 
 # Real data
@@ -79,7 +108,7 @@ anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"),
 intra <- maxInDist(anoDist, anoSpp)
 inter <- nonConDist(anoDist, anoSpp)
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "max.intra", m = 8, B = 10000, replacement = TRUE, conf.level = 0.95))
+(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = 15, B = 10000, replacement = FALSE, conf.level = 0.95))
 plot(density(out$boot.samples))
 
 
