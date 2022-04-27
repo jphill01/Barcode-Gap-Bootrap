@@ -108,7 +108,7 @@ anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"),
 intra <- maxInDist(anoDist, anoSpp)
 inter <- nonConDist(anoDist, anoSpp)
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = 15, B = 10000, replacement = TRUE, conf.level = 0.95))
+(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = sqrt(length(inter)), B = 10000, replacement = TRUE, conf.level = 0.95))
 
 plot(density(out$boot.samples))
 
