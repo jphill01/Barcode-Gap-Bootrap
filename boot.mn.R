@@ -120,6 +120,6 @@ library(boot)
 f <- function(x, i) {
   return(min(x[i, 2]) - max(x[i, 1])) # barcode gap
 }
-y <- boot(out$genetic.dists, f, R = 1000)
+y <- boot(out$genetic.dists, f, R = 10000)
 plot(y)
 boot.ci(y)
