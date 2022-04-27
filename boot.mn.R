@@ -4,9 +4,9 @@ set.seed(0673227)
 boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max.intra"), m, B = 10000, 
                     replacement = TRUE, conf.level = 0.95) {
   
-  boot.samples <- numeric(B) # pre-allocate storage vector
+  boot.samples <- numeric(B) # pre-allocate storage vector of bootstrap resamples
   genetic.dists <- na.omit(cbind(intra, inter)) # remove singleton specimens (those with NAs), if any
-  N <- length(genetic.dists)
+  N <- length(genetic.dists) # number of specimens
   
   for (i in 1:B) {
     # sample m genetic distances with or without replacement
@@ -21,14 +21,14 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
     statistic <- match.arg(statistic)
     
     if (statistic == "barcode.gap") {
-      boot.samples[i] <- min(inter.boot) - max(intra.boot) # barcode gap
-      stat.obs <- min(genetic.dists[, "inter"]) - max(genetic.dists[, "intra"]) # observed barcode gap
+      boot.samples[i] <- min(inter.boot) - max(intra.boot) # bootstrapped barcode gap
+      stat.obs <- min(genetic.dists[, "inter"]) - max(genetic.dists[, "intra"]) # observed sample barcode gap
     } else if (statistic == "min.inter") {
-      boot.samples[i] <- min(inter.boot) # minimum intraspecific distance
-      stat.obs <- min(genetic.dists[, "inter"]) # observed minimum interspecfic distance
+      boot.samples[i] <- min(inter.boot) # bootstrapped minimum intraspecific distance
+      stat.obs <- min(genetic.dists[, "inter"]) # observed sample minimum interspecfic distance
     } else {
-      boot.samples[i] <- max(intra.boot) # minimum intraspecific distance
-      stat.obs <- max(genetic.dists[, "intra"]) # observed maximum intraspecific distance
+      boot.samples[i] <- max(intra.boot) # bootstrapped minimum intraspecific distance
+      stat.obs <- max(genetic.dists[, "intra"]) # observed sample maximum intraspecific distance
     }
   }
   
@@ -108,7 +108,8 @@ anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"),
 intra <- maxInDist(anoDist, anoSpp)
 inter <- nonConDist(anoDist, anoSpp)
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = 15, B = 10000, replacement = FALSE, conf.level = 0.95))
+(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = 15, B = 10000, replacement = TRUE, conf.level = 0.95))
+
 plot(density(out$boot.samples))
 
 
@@ -119,7 +120,6 @@ library(boot)
 f <- function(x, i) {
   return(min(x[i, 2]) - max(x[i, 1])) # barcode gap
 }
-y
-y <- boot(out$genetic.dists, R = 10000, f)
+y <- boot(out$genetic.dists, f, R = 1000)
 plot(y)
 boot.ci(y)
