@@ -7,3 +7,7 @@ The function
     boot.mn(intra, inter, statistic = c("barcode.gap", "min.inter", "max.intra"), m, B = 10000, replacement = TRUE, conf.level = 0.95) 
 
 returns a histogram and QQ plot of the estimated sampling distribution for the statistic of interest. Nonparametric confidence intervals are also computed. 
+
+## Choosing *m*
+
+*m* should be chosen such that both *m* and *n* approach 0 and \frac{m}{n} approaches \infty
