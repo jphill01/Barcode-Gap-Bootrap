@@ -6,7 +6,7 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
   
   boot.samples <- numeric(B) # pre-allocate storage vector of bootstrap resamples
   genetic.dists <- na.omit(cbind(intra, inter)) # remove singleton specimens (those with NAs), if any
-  N <- length(genetic.dists) # number of specimens
+  N <- nrow(genetic.dists) # number of specimens
   
   for (i in 1:B) {
     # sample m genetic distances with or without replacement
@@ -83,7 +83,8 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
   qqnorm(boot.samples) # QQ plot
   qqline(boot.samples)
   
-  return(list(genetic.dists = genetic.dists,
+  return(list(N = N,
+              genetic.dists = genetic.dists,
               boot.samples = boot.samples, 
               stat.obs = stat.obs,
               stat.boot.est = stat.boot.est,
@@ -108,9 +109,9 @@ anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"),
 intra <- maxInDist(anoDist, anoSpp)
 inter <- nonConDist(anoDist, anoSpp)
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = sqrt(length(inter)), B = 10000, replacement = TRUE, conf.level = 0.95))
+(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = sqrt(length(intra)), B = 10000, replacement = TRUE, conf.level = 0.95))
 
-plot(density(out$boot.samples))
+# plot(density(out$boot.samples))
 
 
 # Compare to standard bootstrap
