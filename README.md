@@ -10,4 +10,4 @@ returns a histogram and QQ plot of the estimated sampling distribution for the s
 
 ## Choosing *m*
 
-The value of *m* should be chosen such that both *m* and *n* approach 0 and <img src="https://render.githubusercontent.com/render/math?math=\frac{m}{n}"> approaches &#x221e;.
+The value of *m* should be chosen such that *m* and *n* each approach 0 and <img src="https://render.githubusercontent.com/render/math?math=\frac{m}{n}"> approaches &#x221e;. Functions that satisfy this property are $m$ = &radic; $n$.
