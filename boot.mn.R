@@ -53,12 +53,15 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
     # Estimate parameter
     if (statistic == "max.intra") {
       jack.est <- max(intra.new)
+      jack.mean <- mean(intra.new)
     } else if (statistic == "min.inter") {
       jack.est <- min(inter.new)
+      jack.mean <- mean(inter.new)
     } else {
       jack.est <- min(inter.new) - max(intra.new)
+      jack.mean <- mean(inter.new - intra.new)
     }
-    I[i] <- (N - 1) * (stat.obs - jack.est)
+    I[i] <- jack.mean - jack.est
   } 
   
   # Estimate acceleration constant based on jackknife samples
@@ -106,7 +109,7 @@ anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"),
 intra <- maxInDist(anoDist, anoSpp)
 inter <- nonConDist(anoDist, anoSpp)
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = ceiling(log(out$N)), B = 10000, replacement = TRUE, conf.level = 0.95))
+(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = ceiling(log(nrow(genetic.dists))), B = 10000, replacement = TRUE, conf.level = 0.95))
 
 summary(out$boot.samples)
 length(which(out$boot.samples == out$stat.obs)) / 10000
