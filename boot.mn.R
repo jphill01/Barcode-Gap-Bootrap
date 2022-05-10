@@ -34,7 +34,6 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
   
   stat.boot.est <- mean(boot.samples) # bootstrap mean
   stat.boot.bias <- stat.boot.est - stat.obs # bootstrap bias
-  # stat.boot.se <- sqrt(sum((boot.samples - stat.boot.est)^2) / (B - 1)) # bootstrap standard error
   stat.boot.se <- sd(boot.samples)
   
   ### Bootstrap confidence intervals ###
@@ -62,17 +61,15 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
     I[i] <- (N - 1) * (stat.obs - jack.est)
   } 
   
-  # Estimate acceleration constant
-  a.hat <- (sum(I^3) / sum(I^2)^(3/2)) / 6
+  # Estimate acceleration constant based on jackknife samples
+  a.hat <- (sum(I^3) / sum(I^2)^(3/2)) / 6 # sample skewness 
   
   p.adjusted <- pnorm(z0 + (z0 + z.crit) / (1 - a.hat * (z0 + z.crit))) # adjusted z critical value
  
   stat.boot.norm.ci <- (stat.obs - stat.boot.bias) + z.crit * sd(boot.samples) # Normal
-  stat.boot.basic.ci <- rev(2*stat.obs - sort(boot.samples)[idx]) # Basic
-  # stat.boot.perc.ci <- sort(boot.samples)[idx] # Percentile
-  stat.boot.perc.ci <- quantile(boot.samples, c((1 - conf.level) / 2, (1 + conf.level) / 2))
-  # stat.boot.bca.ci <- sort(boot.samples)[idx.adjusted]
-  stat.boot.bca.ci <- quantile(boot.samples, round(p.adjusted, 1))
+  stat.boot.basic.ci <- rev(2 * stat.obs - sort(boot.samples)[idx]) # Basic
+  stat.boot.perc.ci <- quantile(boot.samples, c((1 - conf.level) / 2, (1 + conf.level) / 2)) # Percentile
+  stat.boot.bca.ci <- quantile(boot.samples, round(p.adjusted, 1)) # BCa
   
   ### Output ###
   
@@ -109,7 +106,7 @@ anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"),
 intra <- maxInDist(anoDist, anoSpp)
 inter <- nonConDist(anoDist, anoSpp)
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = ceiling(sqrt(length(intra))), B = 10000, replacement = TRUE, conf.level = 0.95))
+(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = ceiling(log(out$N)), B = 10000, replacement = TRUE, conf.level = 0.95))
 
 summary(out$boot.samples)
 length(which(out$boot.samples == out$stat.obs)) / 10000
