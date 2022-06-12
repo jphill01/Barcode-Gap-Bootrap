@@ -1,12 +1,39 @@
-setwd("/Users/jarrettphillips/desktop")
-set.seed(0673227)
+################################################################################
+# Computes the sampling distribution of the DNA barcode gap, intraspecific     #
+# distance and minimum interspecific distance via the m-out-of-n resampling    #
+# using either with-replacement resampling (bootstrapping) or without-         # 
+# replacement sampling (subsampling)                                           #
+#                                                                              #
+# Coded by Jarrett D. Phillips and Robert G. Young, DoIB, University of Guelph #       
+################################################################################
 
-boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max.intra"), m, B = 10000, 
-                    replacement = TRUE, conf.level = 0.95) {
+library(pegas) # to calculate pairwise genetic distance matrix
+library(spider) # to calculate intra- and interspecific genetic distances
+
+boot.mn <- function(intra, inter, statistic = c("barcode.gap", 
+                    "min.inter", "max.intra"), m, B = 10000, replacement = TRUE, 
+                    conf.level = 0.95) {
   
-  boot.samples <- numeric(B) # pre-allocate storage vector of bootstrap resamples
-  genetic.dists <- na.omit(cbind(intra, inter)) # remove singleton specimens (those with NAs), if any
-  N <- nrow(genetic.dists) # number of specimens
+  #############################################################################
+  # intra - intraspecific pairwise genetic distances                          #                                                                   #
+  # inter - interspecific pairwise genetic distances                                                                         #
+  # model - DNA substitution model - K2P by default                           #
+  # statistic - statistic of interest to resample - barcode.gap by default    #                            #``
+  # m - resample size - should be less than the number of data observations   #
+  # such that both m and n approach infinity, but m/n approaches 0            #
+  # B - resample size - 10000 by default                                      #
+  # replacement - with- or without- replacement resampling - TRUE by default  #
+  # conf.level - confidence level for interval estimation                     #
+  #############################################################################
+  
+  # pre-allocate storage vector of bootstrap resamples
+  boot.samples <- numeric(B) 
+  # remove singleton specimens (those with NAs), if any
+  genetic.dists <- na.omit(cbind(intra, inter)) 
+  # number of specimens
+  N <- nrow(genetic.dists) 
+  # select desired statistic
+  statistic <- match.arg(statistic)
   
   for (i in 1:B) {
     # sample m genetic distances with or without replacement
@@ -18,69 +45,44 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
       inter.boot <- sample(genetic.dists[, "inter"], size = m, replace = FALSE)
     }
     
-    statistic <- match.arg(statistic)
-    
     if (statistic == "barcode.gap") {
-      boot.samples[i] <- min(inter.boot) - max(intra.boot) # bootstrapped barcode gap
-      stat.obs <- min(genetic.dists[, "inter"]) - max(genetic.dists[, "intra"]) # observed sample barcode gap
+      # bootstrapped barcode gap
+      boot.samples[i] <- min(inter.boot) - max(intra.boot)
+      # observed sample barcode gap
+      stat.obs <- min(genetic.dists[, "inter"]) - max(genetic.dists[, "intra"]) 
     } else if (statistic == "min.inter") {
-      boot.samples[i] <- min(inter.boot) # bootstrapped minimum intraspecific distance
-      stat.obs <- min(genetic.dists[, "inter"]) # observed sample minimum interspecfic distance
-    } else {
-      boot.samples[i] <- max(intra.boot) # bootstrapped minimum intraspecific distance
-      stat.obs <- max(genetic.dists[, "intra"]) # observed sample maximum intraspecific distance
+      # bootstrapped minimum intraspecific distance
+      boot.samples[i] <- min(inter.boot) 
+      # observed sample minimum interspecfic distance
+      stat.obs <- min(genetic.dists[, "inter"]) 
+    } else { # max.intra
+      # bootstrapped minimum intraspecific distance
+      boot.samples[i] <- max(intra.boot) 
+      # observed sample maximum intraspecific distance
+      stat.obs <- max(genetic.dists[, "intra"]) 
     }
   }
   
-  stat.boot.est <- mean(boot.samples) # bootstrap mean
-  stat.boot.bias <- stat.boot.est - stat.obs # bootstrap bias
-  stat.boot.se <- sd(boot.samples)
+  # bootstrap mean
+  stat.boot.est <- mean(boot.samples)
+  # bootstrap bias
+  stat.boot.bias <- stat.boot.est - stat.obs 
+  # bootstrap standard error
+  stat.boot.se <- sd(boot.samples) 
   
-  ### Bootstrap confidence intervals ###
-  
-  idx <- trunc((B + 1) * c((1 - conf.level) / 2, (1 + conf.level) / 2))
-  z.crit <- qnorm(c((1 - conf.level) / 2, (1 + conf.level) / 2)) # z critical values
-  
-  ## BCa interval ##
-  
-  z0 <- qnorm(mean(boot.samples <= stat.obs))
-  
-  I <- rep(NA, N)
-  for (i in 1:N) {
-    # Remove ith data point
-    intra.new <- genetic.dists[, "intra"][-i]
-    inter.new <- genetic.dists[, "inter"][-i]
-    # Estimate parameter
-    if (statistic == "max.intra") {
-      jack.est <- max(intra.new)
-      jack.mean <- mean(intra.new)
-    } else if (statistic == "min.inter") {
-      jack.est <- min(inter.new)
-      jack.mean <- mean(inter.new)
-    } else {
-      jack.est <- min(inter.new) - max(intra.new)
-      jack.mean <- mean(inter.new - intra.new)
-    }
-    I[i] <- jack.mean - jack.est
-  } 
-  
-  # Estimate acceleration constant based on jackknife samples
-  a.hat <- (sum(I^3) / sum(I^2)^(3/2)) / 6 # sample skewness 
-  
-  p.adjusted <- pnorm(z0 + (z0 + z.crit) / (1 - a.hat * (z0 + z.crit))) # adjusted z critical value
- 
-  stat.boot.norm.ci <- (stat.obs - stat.boot.bias) + z.crit * sd(boot.samples) # Normal
-  stat.boot.basic.ci <- rev(2 * stat.obs - sort(boot.samples)[idx]) # Basic
-  stat.boot.perc.ci <- quantile(boot.samples, c((1 - conf.level) / 2, (1 + conf.level) / 2)) # Percentile
-  stat.boot.bca.ci <- quantile(boot.samples, round(p.adjusted, 1)) # BCa
-  
+  # Percentile confidence interval
+  stat.boot.perc.ci <- quantile(boot.samples, c((1 - conf.level) / 2, 
+                                            (1 + conf.level) / 2)) 
+
   ### Output ###
   
   par(mfrow = c(1, 2))
   
-  hist(boot.samples) # histogram
+  # histogram
+  hist(boot.samples) 
   abline(v = stat.boot.est, lty = 2)
-  qqnorm(boot.samples) # QQ plot
+  # QQ plot
+  qqnorm(boot.samples) 
   qqline(boot.samples)
   
   return(list(N = N,
@@ -90,29 +92,30 @@ boot.mn <- function(intra, inter, statistic = c("barcode.gap", "min.inter", "max
               stat.boot.est = stat.boot.est,
               stat.boot.bias = stat.boot.bias,
               stat.boot.se = stat.boot.se,
-              stat.boot.norm.ci = stat.boot.norm.ci,
-              stat.boot.basic.ci = stat.boot.basic.ci,
-              stat.boot.perc.ci = stat.boot.perc.ci,
-              stat.boot.bca.ci = stat.boot.bca.ci))
+              stat.boot.perc.ci = stat.boot.perc.ci))
 }
 
 # Real data
 
-library(pegas)
-library(spider)
-
 data(anoteropsis)
-anoDist <- dist.dna(anoteropsis)
-anoSpp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"), 
-                 function(x) paste(x[1], x[2], sep = "_"))
+# calculate distance matrix with complete deletion of missing/ambiguous data 
+dist.mat <- dist.dna(anoteropsis, model = "raw", pairwise.deletion = FALSE) 
+# retrieve taxon names
+spp <- sapply(strsplit(dimnames(anoteropsis)[[1]], split = "_"), 
+              function(x) paste(x[1], x[2], sep = "_")) 
 
-intra <- maxInDist(anoDist, anoSpp)
-inter <- nonConDist(anoDist, anoSpp)
+# calculate max intraspecific distance
+intra <- maxInDist(dist.mat, spp) 
+# calculate interspecfic (nearest neighbour) distance
+inter <- nonConDist(dist.mat, spp)  
 
-(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", m = ceiling(log(length(intra))), B = 10000, replacement = TRUE, conf.level = 0.95))
+
+(out <- boot.mn(intra = intra, inter = inter, statistic = "barcode.gap", 
+                m = ceiling(log(length(intra))), B = 10000, replacement = TRUE, 
+                conf.level = 0.95))
 
 summary(out$boot.samples)
-length(which(out$boot.samples == out$stat.obs)) / 10000
+mean(out$boot.samples >= out$stat.obs)
 
 # Compare to standard bootstrap - does not work
 
